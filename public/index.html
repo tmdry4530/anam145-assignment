@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ETH Balance Checker</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f5f5; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
+    .container { background: #fff; padding: 2rem; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); width: 100%; max-width: 520px; }
+    h1 { font-size: 1.4rem; margin-bottom: 1rem; }
+    .input-group { display: flex; gap: 0.5rem; margin-bottom: 1rem; }
+    input { flex: 1; padding: 0.6rem; border: 1px solid #ccc; border-radius: 4px; font-size: 0.9rem; font-family: monospace; }
+    button { padding: 0.6rem 1.2rem; background: #2563eb; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-size: 0.9rem; }
+    button:disabled { background: #93b4f5; cursor: not-allowed; }
+    .result { padding: 1rem; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 4px; margin-top: 0.5rem; }
+    .error { padding: 1rem; background: #fef2f2; border: 1px solid #fecaca; border-radius: 4px; margin-top: 0.5rem; color: #b91c1c; }
+    .label { font-size: 0.8rem; color: #666; }
+    .value { font-size: 1.1rem; font-weight: 600; word-break: break-all; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Ethereum Balance Checker (Sepolia)</h1>
+    <div class="input-group">
+      <input id="address" type="text" placeholder="0x..." />
+      <button id="btn" type="button">조회</button>
+    </div>
+    <div id="output"></div>
+  </div>
+  <script>
+    const addressInput = document.getElementById('address');
+    const btn = document.getElementById('btn');
+    const output = document.getElementById('output');
+
+    btn.addEventListener('click', async () => {
+      const address = addressInput.value.trim();
+      output.innerHTML = '';
+      btn.disabled = true;
+
+      try {
+        const res = await fetch('/api/balance?address=' + encodeURIComponent(address));
+        const data = await res.json();
+
+        if (!res.ok) {
+          let msg = data.message || 'Unknown error';
+          if (res.status === 429) msg = '요청이 너무 많습니다. 잠시 후 다시 시도하세요.';
+          output.innerHTML = '<div class="error">' + escapeHtml(msg) + '</div>';
+          return;
+        }
+
+        output.innerHTML =
+          '<div class="result">' +
+            '<div class="label">Address</div>' +
+            '<div class="value">' + escapeHtml(data.address) + '</div>' +
+            '<div class="label" style="margin-top:0.5rem">Balance</div>' +
+            '<div class="value">' + escapeHtml(data.balanceInEth) + ' ETH</div>' +
+            (data.cached ? '<div class="label" style="margin-top:0.3rem">(cached)</div>' : '') +
+          '</div>';
+      } catch {
+        output.innerHTML = '<div class="error">서버에 연결할 수 없습니다.</div>';
+      } finally {
+        btn.disabled = false;
+      }
+    });
+
+    function escapeHtml(str) {
+      const div = document.createElement('div');
+      div.textContent = str;
+      return div.innerHTML;
+    }
+  </script>
+</body>
+</html>
